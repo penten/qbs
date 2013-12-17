@@ -20,38 +20,38 @@ Qbs stands for Query By Struct. A Go ORM. [中文版 README](https://github.com/
 
 ##Features
 
-* Define table schema in struct type, create table if not exists.
-* Detect table columns in database and alter table add new column automatically.
+* Define table schema in struct type, create table if it doesn't exist.
+* Detect table columns in database and alter table to add new columns automatically.
 * Define selection clause in struct type, fields in the struct type become the columns to be selected.
-* Define join query in struct type by add pointer fields which point to the parent table's struct.
-* Do CRUD query by struct value.
+* Define join query in struct type by adding pointer fields which point to the parent table's struct.
+* Do CRUD queries by struct value.
 * After a query, all the data you need will be filled into the struct value.
 * Compose where clause by condition, which can easily handle complex precedence of "AND/OR" sub conditions.
 * If Id value in the struct is provided, it will be added to the where clause.
-* "Created" column will be set to current time when insert, "Updated" column will be set to current time when insert and update.
+* "Created" column will be set to current time on insert, "Updated" column will be set to current time on insert and update.
 * Struct type can implement Validator interface to do validation before insert or update.
-* Support MySQL, PosgreSQL and SQLite3.
-* Support connection pool.
+* Supports MySQL, PosgreSQL and SQLite3.
+* Supports connection pooling.
 
 ## Performance
 
 `Qbs.Find` is about 60% faster on mysql, 130% faster on postgreSQL than raw `Db.Query`, about 20% slower than raw `Stmt.Query`. (benchmarked on windows).
-The reason why it is faster than `Db.Query` is because all prepared Statements are cached in map.
+The reason why it is faster than `Db.Query` is because all prepared Statements are cached in a map.
 
 ##Install
 
-Only support go 1.1+
+Only supports go 1.1+
 
 Go get to get the most recent source code.
 
     go get github.com/coocood/qbs
 
-New version may break backwards compatibility, so for production project, it's better to 
+New versions may break backwards compatibility, so for production projects, it's better to 
 download the tagged version. The most recent release is [v0.2](https://github.com/coocood/qbs/tags).
 
-tags with same minor version would be backward compatible, e.g `v0.1` and `v0.1.1`.
+tags with the same minor version would be backward compatible, e.g `v0.1` and `v0.1.1`.
 
-tags with different minor version would break compatibility, e.g `v0.1.1` and `v0.2`.
+tags with different minor versions would break compatibility, e.g `v0.1.1` and `v0.2`.
 
 ## API Documentation
 
@@ -71,16 +71,16 @@ See [Gowalker](http://gowalker.org/github.com/coocood/qbs) for complete document
 ### Define a model `User`
 - If the field name is `Id` and field type is `int64`, the field will be considered as the primary key of the table.
 if you want define a primary key with name other than `Id`, you can set the tag `qbs:"pk"` to explictly mark the field as primary key.
-- The tag of `Name` field `qbs:"size:32,index"` is used to define the column attributes when create the table, attributes are comma seperated, inside double quotes.
+- The tag of `Name` field `qbs:"size:32,index"` is used to define the column attributes when creating the table, attributes are comma seperated, inside double quotes.
 - The `size:32` tag on a string field will be translated to SQL `varchar(32)`, add `index` attribute to create a index on the column, add `unique` attribute to create a unique index on the column
-- Some DB (MySQL) can not create a index on string column without `size` defined.
+- Some DB (MySQL) can not create an index on string columns without `size` defined.
 
         type User struct {
             Id   int64
             Name string `qbs:"size:32,index"`
         }
 
-- If you want to create multi column index, you should implement `Indexed` interface by define a `Indexes` method like the following.
+- If you want to create multi column index, you should implement `Indexed` interface by defining a `Indexes` method like the following.
 
         func (*User) Indexes(indexes *qbs.Indexes){
             //indexes.Add("column_a", "column_b") or indexes.AddUnique("column_a", "column_b")
@@ -89,9 +89,9 @@ if you want define a primary key with name other than `Id`, you can set the tag 
 ###Create a new table
 
 - call `qbs.GetMigration` function to get a Migration instance, and then use it to create a table.
-- When you create a table, if the table already exists, it will not recreate it, but looking for newly added columns or indexes in the model, and execute add column or add index operation.
+- When you create a table, if the table already exists, it will not recreate it, but look for newly added columns or indexes in the model, and execute add column or add index operation.
 - It is better to do create table task at the start time, because the Migration only do incremental operation, it is safe to keep the table creation code in production enviroment.
-- `CreateTableIfNotExists` expect a struct pointer parameter.
+- `CreateTableIfNotExists` expects a struct pointer parameter.
 
         func CreateUserTable() error{
             migration, err := qbs.GetMigration()
@@ -103,8 +103,8 @@ if you want define a primary key with name other than `Id`, you can set the tag 
         }
 
 ### Get and use `*qbs.Qbs` instance：
-- Suppose we are in a handle http function. call `qbs.GetQbs()` to get a instance.
-- Be sure to close it by calling `defer q.Close()` after get it.
+- Suppose we are in a handle http function. call `qbs.GetQbs()` to get an instance.
+- Be sure to close it by calling `defer q.Close()` after getting it.
 - qbs has connection pool, the default size is 100, you can call `qbs.ChangePoolSize()` to change the size.
 
         func GetUser(w http.ResponseWriter, r *http.Request){
@@ -120,7 +120,7 @@ if you want define a primary key with name other than `Id`, you can set the tag 
         	w.Write(data)
         }
 
-### Inset a row：
+### Insert a row：
 - Call `Save` method to insert or update the row，if the primary key field `Id` has not been set, `Save` would execute insert stamtment.
 - If `Id` is set to a positive integer, `Save` would query the count of the row to find out if the row already exists, if not then execute `INSERT` statement.
 otherwise execute `UPDATE`.
@@ -151,7 +151,7 @@ otherwise execute `UPDATE`.
         	return users, err
         }
 
-- If you want to add conditions other than `Id`, you should all `Where` method. `WhereEqual("name", name)` is equivalent to `Where（"name = ?", name)`, just a shorthand method.
+- If you want to add conditions other than `Id`, you should call `Where` method. `WhereEqual("name", name)` is equivalent to `Where（"name = ?", name)`, just a shorthand method.
 - Only the last call to `Where`/`WhereEqual` counts, so it is only applicable to define simple condition.
 - Notice that the column name passed to `WhereEqual` method is lower case, by default, all the camel case field name and struct name will be converted to snake case in database storage,
 so whenever you pass a column name or table name parameter in string, it should be in snake case.
@@ -163,7 +163,7 @@ so whenever you pass a column name or table name parameter in string, it should 
             return user, err
         }
 
-- If you need to define more complex condition, you should call `Condition` method, it expects a `*Condition` parameter.
+- If you need to define more complex conditions, you should call `Condition` method, it expects a `*Condition` parameter.
  you can get a new condition instance by calling `qbs.NewCondition`, `qbs.NewEqualCondition` or `qbs.NewInCondition` function.
 - `*Condition` instance has `And`, `Or` ... methods, can be called sequentially to construct a complex condition.
 - `Condition` method of Qbs instance should only be called once as well, it will replace previous condition defined by `Condition` or `Where` methods.
@@ -189,7 +189,7 @@ so whenever you pass a column name or table name parameter in string, it should 
         	return q.Save(user)
         }
 
-### Update multiple row
+### Update multiple rows
 - Call `Update` to update multiple rows at once, but you should call this method cautiously, if the the model struct contains all the columns, it will update every column, most of the time this is not what we want.
 - The right way to do it is to define a temporary model struct in method or block, that only contains the column we want to update.
 
@@ -212,14 +212,14 @@ so whenever you pass a column name or table name parameter in string, it should 
         }
 
 ### Define another table for join query
-- For join query to work, you should has a pair of fields to define the join relationship in the model struct.
-- Here the model `Post` has a `AuthorId` int64 field, and has a `Author` field of type `*User`.
+- For a join query to work, you should have a pair of fields to define the join relationship in the model struct.
+- Here the model `Post` has a `AuthorId` int64 field, and has an `Author` field of type `*User`.
 - The rule to define join relationship is like `{xxx}Id int64`, `{xxx} *{yyy}`.
 - As the `Author` field is pointer type, it will be ignored when creating table.
 - As `AuthorId` is a join column, a index of it will be created automatically when creating the table, so you don't have to add `qbs:"index"` tag on it.
-- You can also set the join column explicitly by add a tag `qbs:"join:Author"` to it for arbitrary field Name. here `Author` is the struct pointer field of the parent table model.
+- You can also set the join column explicitly by adding a tag `qbs:"join:Author"` to it for arbitrary field Name. here `Author` is the struct pointer field of the parent table model.
 - To define a foreign key constraint, you have to explicitly add a tag `qbs:"fk:Author"` to the foreign key column, and an index will be created as well when creating table.
-- `Created time.Time` field will be set to the current time when insert a row,`Updated time.Time` field will be set to current time when update the row.
+- `Created time.Time` field will be set to the current time when inserting a row,`Updated time.Time` field will be set to current time when updating the row.
 - You can explicitly set tag `qbs:"created"` or `qbs:"updated"` on `time.Time` field to get the functionality for arbitrary field name.
 
         type Post struct {
@@ -231,9 +231,9 @@ so whenever you pass a column name or table name parameter in string, it should 
             Updated time.Time
         }
 
-### Omit some column
+### Omit some columns
 - Sometimes we do not need to get every field of a model, especially for joined field (like `Author` field) or large field (like `Content` field).
-- Omit them will get better performance.
+- Omitting them will give better performance.
 
         func FindPostsOmitContentAndCreated(q *qbs.Qbs) ([]*Post, error) {
         	var posts []*Post
@@ -249,7 +249,7 @@ so whenever you pass a column name or table name parameter in string, it should 
         	return posts, err
         }
 
-##Projects use Qbs:
+##Projects that use Qbs:
 
 - a CMS system [toropress](https://github.com/insionng/toropress)
 - Go documentation reference website [Gowalker](http://gowalker.org/)
@@ -257,6 +257,6 @@ so whenever you pass a column name or table name parameter in string, it should 
 ##Contributors
 [Erik Aigner](https://github.com/eaigner)
 Qbs was originally a fork from [hood](https://github.com/eaigner/hood) by [Erik Aigner](https://github.com/eaigner), 
-but I changed more than 80% of the code, then it ended up become a totally different ORM.
+but I changed more than 80% of the code, then it ended up becoming a totally different ORM.
 
 [NuVivo314](https://github.com/NuVivo314),  [Jason McVetta](https://github.com/jmcvetta), [pix64](https://github.com/pix64), [vadimi](https://github.com/vadimi), [Ravi Teja](https://github.com/tejainece).
